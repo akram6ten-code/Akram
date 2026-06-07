@@ -1,7 +1,7 @@
 import time
 import streamlit as st
 import pandas as pd
-import pandas_ta as ta
+# import pandas_ta as ta
 import yfinance as yf
 
 # ===== CONFIG =====
@@ -28,7 +28,7 @@ def get_data(symbol):
             st.warning(f"{symbol}: Yahoo se data kam mila. {len(df)} candles only.")
             return None
 
-        df['ema'] = ta.ema(df['Close'], length=EMA_LENGTH)
+        # df['ema'] = ta.ema(df['Close'], length=EMA_LENGTH)
         df = df.tail(100) # Last 100 candles hi rakho
         return df
     except Exception as e:
