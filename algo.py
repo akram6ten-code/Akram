@@ -7,12 +7,12 @@ st.set_page_config(page_title="Whos Next Algo", layout="centered")
 
 st.markdown("""
 <style>
-  .big-font {
+ .big-font {
         font-size: 32px!important;
         font-weight: bold;
         margin-bottom: -10px;
     }
-  .signal-font {
+ .signal-font {
         font-size: 24px!important;
         font-weight: bold;
     }
@@ -21,33 +21,35 @@ st.markdown("""
 
 st.title("🚀 Whos Next Algo - BUY/SELL Signals")
 
+# Binance wale symbols use karenge
 coins = {
-    'BTC': 'bitcoin', 
-    'ETH': 'ethereum', 
-    'SOL': 'solana', 
-    'XRP': 'ripple', 
-    'DOGE': 'dogecoin', 
-    'BNB': 'binancecoin'
+    'BTC': 'BTCUSDT', 
+    'ETH': 'ETHUSDT', 
+    'SOL': 'SOLUSDT', 
+    'XRP': 'XRPUSDT', 
+    'DOGE': 'DOGEUSDT', 
+    'BNB': 'BNBUSDT'
 }
 
-@st.cache_data(ttl=60) # 60 sec tak data cache karega, rate limit se bachega
-def get_data(coin_id):
+@st.cache_data(ttl=30) # 30 sec cache. Binance fast hai
+def get_data(symbol):
     try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart?vs_currency=usd&days=2"
+        # Binance Klines API - 1000 candle free
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1h&limit=100"
         r = requests.get(url, timeout=10)
         data = r.json()
-        prices = [x[1] for x in data['prices']]
-        df = pd.DataFrame(prices, columns=['close'])
+        close_prices = [float(x[4]) for x in data] # 4th index = close price
+        df = pd.DataFrame(close_prices, columns=['close'])
         return df
     except:
         return None
 
-for symbol, coin_id in coins.items():
-    df = get_data(coin_id)
+for symbol, binance_symbol in coins.items():
+    df = get_data(binance_symbol)
     
     if df is None or df.empty:
         st.markdown(f'<p class="big-font">{symbol}</p>', unsafe_allow_html=True)
-        st.error("Data load nahi hua. 1 min baad refresh karo.")
+        st.error("Data load nahi hua. Refresh karo.")
         st.divider()
         continue
         
@@ -76,7 +78,5 @@ for symbol, coin_id in coins.items():
     st.write(f"RSI: {rsi:.1f}")
     st.markdown(f'<p class="signal-font">Signal: {signal}</p>', unsafe_allow_html=True)
     st.divider()
-    
-    time.sleep(0.3) # API ko thoda time de
 
-st.caption("Auto-refresh: 1 minute | Data: CoinGecko")
+st.caption("Data: Binance API | No limits | Auto-cache: 30 sec")
