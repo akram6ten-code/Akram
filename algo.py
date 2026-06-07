@@ -1,10 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-# import pandas_ta as ta # EMA hata diya
 import time
 
-# ===== CONFIG =====
 SYMBOLS = {
     'BTC': 'BTC-USD',
     'ETH': 'ETH-USD', 
@@ -14,10 +12,8 @@ SYMBOLS = {
     'BNB': 'BNB-USD'
 }
 
-# EMA_LENGTH = 21 # EMA hata diya
 INTERVAL = '5m'
 REFRESH_INTERVAL = 60
-# ==================
 
 def get_data(symbol):
     ticker = yf.Ticker(SYMBOLS[symbol])
@@ -27,7 +23,6 @@ def get_data(symbol):
         st.warning(f"{symbol}: Yah data available nahi hai")
         return None
     
-    # df['ema'] = ta.ema(df['Close'], length=EMA_LENGTH) # EMA hata diya
     df = df.tail(100)
     return df
     
@@ -44,15 +39,11 @@ while True:
             if df is not None and not df.empty:
                 last = df.iloc[-1]
                 price = float(last['Close'])
-                # ema = float(last['ema']) # EMA hata diya
                 
                 signal = "HOLD ⚪"
-                # if price > ema: signal = "BUY 🟢" # EMA hata diya
-                # if price < ema: signal = "SELL 🔴" # EMA hata diya
                 
-                col1, col2, col3 = st.columns(3)
+                col1, col2 = st.columns(2)
                 col1.metric(f"{symbol}", f"${price:.2f}")
-                # col2.metric("EMA", f"${ema:.2f}") # EMA hata diya
-                col3.write(f"Signal: {signal}")
+                col2.write(f"Signal: {signal}")
                 
     time.sleep(REFRESH_INTERVAL)
