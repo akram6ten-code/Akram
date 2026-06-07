@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import pandas as pd
-import time
 
 st.set_page_config(page_title="Whos Next Algo", layout="centered")
 
@@ -21,35 +20,35 @@ st.markdown("""
 
 st.title("🚀 Whos Next Algo - BUY/SELL Signals")
 
-# Binance wale symbols use karenge
 coins = {
-    'BTC': 'BTCUSDT', 
-    'ETH': 'ETHUSDT', 
-    'SOL': 'SOLUSDT', 
-    'XRP': 'XRPUSDT', 
-    'DOGE': 'DOGEUSDT', 
-    'BNB': 'BNBUSDT'
+    'BTC': 'BTC', 
+    'ETH': 'ETH', 
+    'SOL': 'SOL', 
+    'XRP': 'XRP', 
+    'DOGE': 'DOGE', 
+    'BNB': 'BNB'
 }
 
-@st.cache_data(ttl=30) # 30 sec cache. Binance fast hai
+@st.cache_data(ttl=120) # 2 min cache. 100k limit hai month ki
 def get_data(symbol):
     try:
-        # Binance Klines API - 1000 candle free
-        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1h&limit=100"
-        r = requests.get(url, timeout=10)
+        # CryptoCompare API - No key needed for basic
+        url = f"https://min-api.cryptocompare.com/data/v2/histohour?fsym={symbol}&tsym=USD&limit=100"
+        headers = {'User-Agent': 'Mozilla/5.0'} # Ye important hai
+        r = requests.get(url, headers=headers, timeout=10)
         data = r.json()
-        close_prices = [float(x[4]) for x in data] # 4th index = close price
-        df = pd.DataFrame(close_prices, columns=['close'])
+        prices = [x['close'] for x in data['Data']['Data']]
+        df = pd.DataFrame(prices, columns=['close'])
         return df
     except:
         return None
 
-for symbol, binance_symbol in coins.items():
-    df = get_data(binance_symbol)
+for symbol, cc_symbol in coins.items():
+    df = get_data(cc_symbol)
     
     if df is None or df.empty:
         st.markdown(f'<p class="big-font">{symbol}</p>', unsafe_allow_html=True)
-        st.error("Data load nahi hua. Refresh karo.")
+        st.error("Data load nahi hua. 1 min baad refresh karo.")
         st.divider()
         continue
         
@@ -79,4 +78,4 @@ for symbol, binance_symbol in coins.items():
     st.markdown(f'<p class="signal-font">Signal: {signal}</p>', unsafe_allow_html=True)
     st.divider()
 
-st.caption("Data: Binance API | No limits | Auto-cache: 30 sec")
+st.caption("Data: CryptoCompare | 100k calls/month free")
