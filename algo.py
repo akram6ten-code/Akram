@@ -1,71 +1,65 @@
 import streamlit as st
-import yfinance as yf
+import requests
 import pandas as pd
-import time
 
-SYMBOLS = {
-    'BTC': 'BTC-USD',
-    'ETH': 'ETH-USD', 
-    'SOL': 'SOL-USD',
-    'XRP': 'XRP-USD',
-    'DOGE': 'DOGE-USD',
-    'BNB': 'BNB-USD'
-}
+st.set_page_config(page_title="Whos Next Algo", layout="centered")
 
-EMA_LENGTH = 21
-RSI_LENGTH = 14
-INTERVAL = '5m'
-REFRESH_INTERVAL = 60
+# CSS se font size bada kar diya
+st.markdown("""
+<style>
+   .big-font {
+        font-size: 32px!important;
+        font-weight: bold;
+    }
+   .signal-font {
+        font-size: 24px!important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-def calculate_rsi(series, period=14):
-    delta = series.diff()
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
-    avg_gain = gain.rolling(window=period).mean()
-    avg_loss = loss.rolling(window=period).mean()
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
-
-def get_data(symbol):
-    ticker = yf.Ticker(SYMBOLS[symbol])
-    df = ticker.history(period='5d', interval=INTERVAL)
-    
-    if df.empty or len(df) < 50:
-        st.warning(f"{symbol}: Yah data available nahi hai")
-        return None
-    
-    df['ema'] = df['Close'].ewm(span=EMA_LENGTH, adjust=False).mean()
-    df['rsi'] = calculate_rsi(df['Close'], RSI_LENGTH)
-    df = df.tail(100)
-    return df
-    
-st.set_page_config(page_title="Whos Next Algo", layout="wide")
 st.title("🚀 Whos Next Algo - BUY/SELL Signals")
 
-placeholder = st.empty()
+coins = {
+    'BTC': 'bitcoin', 
+    'ETH': 'ethereum', 
+    'SOL': 'solana', 
+    'XRP': 'ripple', 
+    'DOGE': 'dogecoin', 
+    'BNB': 'binancecoin'
+}
 
-while True:
-    with placeholder.container():
-        for symbol in SYMBOLS.keys():
-            df = get_data(symbol)
-            
-            if df is not None and not df.empty:
-                last = df.iloc[-1]
-                price = float(last['Close'])
-                ema = float(last['ema'])
-                rsi = float(last['rsi'])
-                
-                signal = "HOLD ⚪"
-                if price > ema and rsi < 70 and rsi > 30:
-                    signal = "BUY 🟢"
-                if price < ema and rsi > 70:
-                    signal = "SELL 🔴"
-                
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric(f"{symbol}", f"${price:.2f}")
-                col2.metric("EMA21", f"${ema:.2f}")
-                col3.metric("RSI", f"{rsi:.1f}")
-                col4.write(f"**Signal: {signal}**")
-                
-    time.sleep(REFRESH_INTERVAL)
+def get_data(coin_id):
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart?vs_currency=usd&days=2"
+    data = requests.get(url).json()
+    prices = [x[1] for x in data['prices']]
+    df = pd.DataFrame(prices, columns=['close'])
+    return df
+
+for symbol, coin_id in coins.items():
+    df = get_data(coin_id)
+    df['EMA21'] = df['close'].ewm(span=21).mean()
+    
+    delta = df['close'].diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(14).mean()
+    rs = gain / loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+    
+    price = df['close'].iloc[-1]
+    ema = df['EMA21'].iloc[-1]
+    rsi = df['RSI'].iloc[-1]
+    
+    if price > ema and 30 < rsi < 70:
+        signal = "BUY 🟢"
+    elif price < ema and rsi > 70:
+        signal = "SELL 🔴"
+    else:
+        signal = "HOLD ⚪"
+    
+    # Yahan font bada kar diya
+    st.markdown(f'<p class="big-font">{symbol}</p>', unsafe_allow_html=True)
+    st.write(f"**${price:,.2f}**")
+    st.write(f"EMA21: ${ema:,.2f}")
+    st.write(f"RSI: {rsi:.1f}")
+    st.markdown(f'<p class="signal-font">Signal: {signal}</p>', unsafe_allow_html=True)
+    st.divider()
